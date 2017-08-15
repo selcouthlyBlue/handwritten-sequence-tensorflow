@@ -247,7 +247,6 @@ class Model(object):
         return imageInputs, seq_lens, targets
     
   def inference(self, batch_x):
-       
         [imageInputs, seq_len] = batch_x
         tf.summary.image("images", imageInputs)
         with tf.name_scope('convLayers'):
@@ -269,7 +268,7 @@ class Model(object):
             # Reshape to (n_steps*batch_size, n_input)
             x = tf.reshape(h_pool2_flat, [-1, hh*chanels])
             # Split to get a list of 'n_steps' tensors of shape (batch_size, n_input)
-            x = tf.split(0, ww, x)
+            x = tf.split(x, ww, 0)
             
         with tf.name_scope('BRNN'):
             if self.initializer == "graves":
@@ -278,11 +277,11 @@ class Model(object):
                 myInitializer = tf.truncated_normal(shape, stddev=0.1)
                 
             if self.rnn_cell == "LSTM":
-                cell = tf.nn.rnn_cell.LSTMCell(self.hidden, state_is_tuple=True,initializer=myInitializer)
+                cell = tf.contrib.rnn.LSTMCell(self.hidden, state_is_tuple=True,initializer=myInitializer)
             elif self.rnn_cell == "BasicLSTM":
-                cell = tf.nn.rnn_cell.BasicLSTMCell(self.hidden,forget_bias=1.0,state_is_tuple=True)
+                cell = tf.contrib.rnn.BasicLSTMCell(self.hidden,forget_bias=1.0,state_is_tuple=True)
             elif self.rnn_cell == "GRU":
-                cell = tf.nn.rnn_cell.GRUCell(self.hidden)
+                cell = tf.contrib.rnn.GRUCell(self.hidden)
             elif self.rnn_cell == "LSTMGRID2":
                 cell = grid_rnn.Grid2LSTMCell(self.hidden,use_peepholes=True,forget_bias=1.0)
             elif self.rnn_cell == "LSTMGRID":
@@ -322,14 +321,14 @@ class Model(object):
                 )       
                 print("insertion of last state")
                 #todo: try just initial states
-                outputs, self.state_fw, self.state_bw  = tf.nn.bidirectional_rnn(stackf, stackb, x,
+                outputs, self.state_fw, self.state_bw  = tf.contrib.rnn.static_bidirectional_rnn(stackf, stackb, x,
                                                                                  sequence_length=seq_len,
                                                                                  dtype=tf.float32,
                                                                                  initial_state_fw=self.rnn_tuple_statef,
                                                                                  initial_state_bw=self.rnn_tuple_stateb)
             else:
                 print("no insertion of last state")
-                outputs, self.state_fw, self.state_bw  = tf.nn.bidirectional_rnn(stackf, stackb, x,
+                outputs, self.state_fw, self.state_bw  = tf.contrib.rnn.static_bidirectional_rnn(stackf, stackb, x,
                                                                                  sequence_length=seq_len,
                                                                                  dtype=tf.float32,
                                                                                  initial_state_fw=self.reset_state_stackf,
